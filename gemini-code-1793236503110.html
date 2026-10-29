@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CIPAS #2 | Plataforma Interactiva EIGRP NetOps</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            black: '#030712',
+                            card: '#090d1a',
+                            panel: '#0f172a',
+                            border: '#1e293b',
+                            cyan: '#00f3ff',
+                            pink: '#ff0055',
+                            yellow: '#ffee00',
+                            green: '#00ff66',
+                            purple: '#a855f7'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        fira: ['Fira Code', 'monospace']
+                    },
+                    boxShadow: {
+                        'neon-cyan': '0 0 15px rgba(0, 243, 255, 0.35), inset 0 0 10px rgba(0, 243, 255, 0.1)',
+                        'neon-pink': '0 0 15px rgba(255, 0, 85, 0.35), inset 0 0 10px rgba(255, 0, 85, 0.1)',
+                        'neon-green': '0 0 15px rgba(0, 255, 102, 0.35)',
+                        'glow-lg': '0 0 35px rgba(0, 243, 255, 0.25)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: #030712;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(0, 243, 255, 0.08) 0%, transparent 60%),
+                radial-gradient(circle at 100% 100%, rgba(255, 0, 85, 0.06) 0%, transparent 50%),
+                linear-gradient(rgba(0, 243, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
+            font-family: 'Fira Code', monospace;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .scanline {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.18) 50%
+            );
+            background-size: 100% 3px;
+            z-index: 99;
+            opacity: 0.5;
+        }
+
+        .clip-corner {
+            clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #030712;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f3ff;
+            border-radius: 2px;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -20;
+            }
+        }
+        .animated-link {
+            stroke-dasharray: 6;
+            animation: dash 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col justify-between selection:bg-cyber-pink selection:text-white pb-20 md:pb-0">
+
+    <!-- Scanline Effect -->
+    <div class="scanline"></div>
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed top-4 right-4 left-4 md:left-auto md:w-96 z-50 transform -translate-y-20 opacity-0 transition-all duration-300 bg-cyber-panel/95 backdrop-blur-md border-2 border-cyber-cyan text-cyber-cyan px-4 py-3 rounded-lg shadow-neon-cyan flex items-center space-x-3 pointer-events-none">
+        <i data-lucide="check-circle-2" class="w-5 h-5 text-cyber-green shrink-0"></i>
+        <span id="toast-message" class="font-fira text-xs font-bold leading-tight">Comando copiado al portapapeles</span>
+    </div>
+
+    <!-- HEADER / NAVIGATION BAR -->
+    <header class="relative z-20 border-b border-cyber-cyan/30 bg-cyber-black/95 backdrop-blur-lg sticky top-0">
+        <div class="max-w-7xl mx-auto px-3 py-2.5 sm:px-6">
+            <div class="flex items-center justify-between gap-2">
+                
+                <!-- Logo & CIPAS #2 Badge -->
+                <div class="flex items-center space-x-2.5">
+                    <div class="p-1.5 border border-cyber-cyan bg-cyber-cyan/10 rounded clip-corner shadow-neon-cyan shrink-0">
+                        <i data-lucide="cpu" class="w-6 h-6 text-cyber-cyan"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-block w-2 h-2 rounded-full bg-cyber-green animate-ping"></span>
+                            <span class="text-[10px] font-fira text-cyber-cyan tracking-wider font-bold">STAND DEMO // STAND LIVE</span>
+                        </div>
+                        <h1 class="text-base sm:text-xl md:text-2xl font-orbitron font-black text-white tracking-wider flex items-center gap-1.5">
+                            EIGRP NETOPS <span class="bg-gradient-to-r from-cyber-pink to-cyber-yellow bg-clip-text text-transparent">CIPAS #2</span>
+                        </h1>
+                    </div>
+                </div>
+
+                <!-- Stand Control Bar -->
+                <div class="flex items-center space-x-2 text-xs font-fira">
+                    <div class="hidden lg:flex items-center space-x-2 bg-cyber-card border border-cyber-cyan/30 px-3 py-1.5 rounded">
+                        <i data-lucide="users" class="w-4 h-4 text-cyber-pink"></i>
+                        <span class="text-gray-400">INTEGRANTES:</span>
+                        <span class="text-cyber-yellow font-bold">CIPAS GRUPO #2</span>
+                    </div>
+
+                    <button onclick="toggleFullScreen()" class="bg-cyber-cyan/10 hover:bg-cyber-cyan/30 text-cyber-cyan border border-cyber-cyan px-3 py-1.5 rounded transition font-orbitron font-bold flex items-center space-x-1">
+                        <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">STAND FULLSCREEN</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABS MOBILE RESPONSIVE SCROLLBAR -->
+            <nav class="flex space-x-1.5 mt-2.5 overflow-x-auto pb-1 no-scrollbar border-t border-gray-800/80 pt-2 font-orbitron text-[11px] sm:text-xs">
+                <button onclick="switchTab('guion')" id="tab-guion" class="tab-btn px-3 py-2 rounded clip-corner border border-gray-800 bg-cyber-panel text-gray-400 hover:text-cyber-cyan whitespace-nowrap transition flex items-center space-x-1.5">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                    <span>1. CONCEPTOS & GUION</span>
+                </button>
+                <button onclick="switchTab('simulador')" id="tab-simulador" class="tab-btn px-3 py-2 rounded clip-corner border border-gray-800 bg-cyber-panel text-gray-400 hover:text-cyber-cyan whitespace-nowrap transition flex items-center space-x-1.5">
+                    <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                    <span>2. SIMULADOR DUAL</span>
+                </button>
+                <button onclick="switchTab('comandos')" id="tab-comandos" class="tab-btn px-3 py-2 rounded clip-corner border border-gray-800 bg-cyber-panel text-gray-400 hover:text-cyber-cyan whitespace-nowrap transition flex items-center space-x-1.5">
+                    <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                    <span>3. COMANDOS CISCO</span>
+                </button>
+                <button onclick="switchTab('calculadora')" id="tab-calculadora" class="tab-btn px-3 py-2 rounded clip-corner border border-gray-800 bg-cyber-panel text-gray-400 hover:text-cyber-cyan whitespace-nowrap transition flex items-center space-x-1.5">
+                    <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+                    <span>4. MÉTRICA K</span>
+                </button>
+                <button onclick="switchTab('pptx')" id="tab-pptx" class="tab-btn active px-3 py-2 rounded clip-corner border border-cyber-cyan bg-cyber-cyan/20 text-cyber-cyan font-bold whitespace-nowrap transition flex items-center space-x-1.5">
+                    <i data-lucide="presentation" class="w-3.5 h-3.5"></i>
+                    <span>5. SLIDES PPTX</span>
+                </button>
+                <button onclick="switchTab('quiz')" id="tab-quiz" class="tab-btn px-3 py-2 rounded clip-corner border border-gray-800 bg-cyber-panel text-gray-400 hover:text-cyber-pink whitespace-nowrap transition flex items-center space-x-1.5">
+                    <i data-lucide="gamepad-2" class="w-3.5 h-3.5 text-cyber-pink"></i>
+                    <span class="text-cyber-pink font-bold">6. QUIZ STAND</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="max-w-7xl mx-auto px-3 py-4 sm:px-6 lg:px-8 flex-grow w-full relative z-10">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: CONCEPTOS, GUION & HUB CIPAS #2      -->
+        <!-- ========================================== -->
+        <section id="content-guion" class="tab-content hidden space-y-4">
+            
+            <div class="relative bg-cyber-card border border-cyber-cyan/60 rounded-lg p-4 sm:p-6 overflow-hidden shadow-neon-cyan clip-corner">
+                <div class="relative z-10 max-w-3xl space-y-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="bg-cyber-pink/20 text-cyber-pink border border-cyber-pink text-[10px] font-bold px-2.5 py-0.5 rounded tracking-wider uppercase">
+                            PRESENTACIÓN DE STAND - CIPAS #2
+                        </span>
+                        <span class="bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan text-[10px] font-bold px-2.5 py-0.5 rounded tracking-wider uppercase">
+                            CISCO PACKET TRACER
+                        </span>
+                    </div>
+                    <h2 class="text-xl sm:text-3xl font-orbitron font-black text-white leading-tight">
+                        PROTOCOL EIGRP: ARQUITECTURA & ENRUTAMIENTO DINÁMICO
+                    </h2>
+                    <p class="text-gray-300 text-xs sm:text-sm leading-relaxed font-fira">
+                        Bienvenidos a la demo interactiva del <strong class="text-cyber-cyan">CIPAS #2</strong>. Explora la estructura de datos de EIGRP, la tolerancia a fallos en milisegundos con el algoritmo DUAL, la configuración de CLI en Cisco IOS y prueba tus conocimientos en la trivia interactiva del stand.
+                    </p>
+                    
+                    <!-- Integrantes Badge Bar -->
+                    <div class="pt-2 flex flex-wrap gap-1.5 text-[10px] font-fira">
+                        <span class="bg-cyber-panel border border-cyber-cyan/40 text-cyber-cyan px-2 py-1 rounded">👨‍💻 Gleimer Arias</span>
+                        <span class="bg-cyber-panel border border-cyber-cyan/40 text-cyber-cyan px-2 py-1 rounded">👨‍💻 Jonny Carrisoza</span>
+                        <span class="bg-cyber-panel border border-cyber-cyan/40 text-cyber-cyan px-2 py-1 rounded">👨‍💻 Edwin Montiel</span>
+                        <span class="bg-cyber-panel border border-cyber-cyan/40 text-cyber-cyan px-2 py-1 rounded">👨‍💻 Miler Alarcón</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="bg-cyber-panel border border-cyber-cyan/40 p-4 rounded-lg clip-corner space-y-3">
+                    <div class="flex items-center space-x-2 text-cyber-cyan border-b border-cyber-cyan/20 pb-2">
+                        <i data-lucide="database" class="w-5 h-5"></i>
+                        <h3 class="font-orbitron font-bold text-sm">1. Las 3 Tablas de EIGRP</h3>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="bg-cyber-card p-2.5 rounded border-l-2 border-cyber-cyan">
+                            <span class="text-cyber-cyan font-bold block">Tabla de Vecinos</span>
+                            <span class="text-gray-300 text-[11px]">Guarda adyacencias directas detectadas vía paquetes <code class="text-cyber-yellow">Hello</code>.</span>
+                        </div>
+                        <div class="bg-cyber-card p-2.5 rounded border-l-2 border-cyber-pink">
+                            <span class="text-cyber-pink font-bold block">Tabla de Topología</span>
+                            <span class="text-gray-300 text-[11px]">Contiene todos los destinos con sus métricas <code class="text-cyber-yellow">FD</code> y <code class="text-cyber-yellow">RD</code>.</span>
+                        </div>
+                        <div class="bg-cyber-card p-2.5 rounded border-l-2 border-cyber-yellow">
+                            <span class="text-cyber-yellow font-bold block">Tabla de Enrutamiento</span>
+                            <span class="text-gray-300 text-[11px]">Solo alberga la mejor ruta activa (<strong class="text-white">Sucesor</strong>).</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-cyber-panel border border-cyber-pink/40 p-4 rounded-lg clip-corner space-y-3">
+                    <div class="flex items-center space-x-2 text-cyber-pink border-b border-cyber-pink/20 pb-2">
+                        <i data-lucide="git-commit" class="w-5 h-5"></i>
+                        <h3 class="font-orbitron font-bold text-sm">2. Algoritmo DUAL & Rutas</h3>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="bg-cyber-card p-2.5 rounded border border-cyber-pink/20">
+                            <span class="text-cyber-green font-bold block">SUCESOR (Successor)</span>
+                            <p class="text-gray-300 text-[11px]">Ruta primaria óptima con la menor Distancia Factible (FD).</p>
+                        </div>
+                        <div class="bg-cyber-card p-2.5 rounded border border-cyber-pink/20">
+                            <span class="text-cyber-yellow font-bold block">SUCESOR FACTIBLE (FS)</span>
+                            <p class="text-gray-300 text-[11px]">Ruta de respaldo precargada para convergencia inmediata.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-cyber-panel border border-cyber-yellow/40 p-4 rounded-lg clip-corner space-y-3 md:col-span-2 lg:col-span-1">
+                    <div class="flex items-center space-x-2 text-cyber-yellow border-b border-cyber-yellow/20 pb-2">
+                        <i data-lucide="sliders" class="w-5 h-5"></i>
+                        <h3 class="font-orbitron font-bold text-sm">3. Parámetros de Operación</h3>
+                    </div>
+                    <div class="space-y-2 text-xs">
+                        <div class="bg-cyber-card p-2.5 rounded">
+                            <span class="text-cyber-cyan font-bold block">Sistema Autónomo (AS):</span>
+                            <span class="text-gray-300 text-[11px]">Identificador numérico que debe coincidir en todos los routers (Ej: <code class="text-cyber-yellow">100</code>).</span>
+                        </div>
+                        <div class="bg-cyber-card p-2.5 rounded">
+                            <span class="text-cyber-pink font-bold block">Passive Interface:</span>
+                            <span class="text-gray-300 text-[11px]">Inhibe el envío de paquetes Hello hacia la LAN de usuarios.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: SIMULADOR DE TOPOLOGÍA DUAL         -->
+        <!-- ========================================== -->
+        <section id="content-simulador" class="tab-content hidden space-y-4">
+            
+            <div class="bg-cyber-panel border border-cyber-cyan/50 p-4 sm:p-5 rounded-lg clip-corner shadow-lg space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-gray-800 pb-3">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-orbitron font-bold text-white flex items-center space-x-2">
+                            <i data-lucide="network" class="w-5 h-5 text-cyber-cyan"></i>
+                            <span>SIMULADOR DE CONVERGENCIA DUAL - CIPAS #2</span>
+                        </h2>
+                    </div>
+
+                    <button id="btn-toggle-fail" onclick="toggleLinkFailure()" class="w-full sm:w-auto bg-cyber-pink text-white font-orbitron font-bold px-4 py-2 rounded text-xs shadow-neon-pink flex items-center justify-center space-x-2">
+                        <i data-lucide="zap-off" class="w-4 h-4"></i>
+                        <span id="fail-btn-text">SIMULAR FALLA DE ENLACE (R1-R2)</span>
+                    </button>
+                </div>
+
+                <div class="relative bg-cyber-black border border-cyber-cyan/30 rounded-lg p-4 h-[320px] sm:h-[380px] flex items-center justify-center overflow-hidden">
+                    <svg class="absolute inset-0 w-full h-full pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+                        <line id="svg-link-r1-r2" x1="20%" y1="35%" x2="50%" y2="80%" stroke="#00f3ff" stroke-width="3" class="animated-link"/>
+                        <line id="svg-link-r2-r3" x1="50%" y1="80%" x2="80%" y2="35%" stroke="#00f3ff" stroke-width="3" class="animated-link"/>
+                        <line id="svg-link-r1-r3" x1="20%" y1="35%" x2="80%" y2="35%" stroke="#ffee00" stroke-width="2" stroke-dasharray="4"/>
+                    </svg>
+
+                    <div onclick="selectRouter('R1')" class="absolute left-[20%] top-[35%] -translate-x-1/2 -translate-y-1/2 text-center cursor-pointer">
+                        <div class="w-14 h-14 bg-cyber-card border-2 border-cyber-cyan rounded-full flex items-center justify-center shadow-neon-cyan mx-auto">
+                            <i data-lucide="router" class="w-6 h-6 text-cyber-cyan"></i>
+                        </div>
+                        <span class="font-orbitron font-bold text-xs text-white block mt-1">R1 (Gateway)</span>
+                    </div>
+
+                    <div onclick="selectRouter('R2')" class="absolute left-[50%] top-[80%] -translate-x-1/2 -translate-y-1/2 text-center cursor-pointer">
+                        <div class="w-14 h-14 bg-cyber-card border-2 border-cyber-yellow rounded-full flex items-center justify-center shadow-neon-yellow mx-auto">
+                            <i data-lucide="router" class="w-6 h-6 text-cyber-yellow"></i>
+                        </div>
+                        <span class="font-orbitron font-bold text-xs text-white block mt-1">R2 (Core)</span>
+                    </div>
+
+                    <div onclick="selectRouter('R3')" class="absolute left-[80%] top-[35%] -translate-x-1/2 -translate-y-1/2 text-center cursor-pointer">
+                        <div class="w-14 h-14 bg-cyber-card border-2 border-cyber-green rounded-full flex items-center justify-center shadow-neon-green mx-auto">
+                            <i data-lucide="router" class="w-6 h-6 text-cyber-green"></i>
+                        </div>
+                        <span class="font-orbitron font-bold text-xs text-white block mt-1">R3 (Branch)</span>
+                    </div>
+
+                    <div id="status-badge" class="absolute top-3 right-3 bg-cyber-green/20 border border-cyber-green text-cyber-green text-[10px] px-2.5 py-1 rounded font-fira font-bold">
+                        ENLACE PRINCIPAL: ACTIVO
+                    </div>
+                </div>
+
+                <div class="bg-cyber-black p-3.5 rounded border border-cyber-cyan/40 font-fira text-xs">
+                    <p id="sim-description" class="text-gray-300 text-[11px]">
+                        Tráfico enrutado vía <strong class="text-cyber-cyan">R2 (Sucesor Principal)</strong>. Métrica FD: <code class="text-cyber-yellow">28160</code>.
+                    </p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: COMANDOS CISCO IOS CLI              -->
+        <!-- ========================================== -->
+        <section id="content-comandos" class="tab-content hidden space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="bg-cyber-panel border border-cyber-cyan/40 p-4 rounded-lg clip-corner space-y-3">
+                    <h3 class="font-orbitron font-bold text-cyber-cyan text-sm border-b border-cyber-cyan/20 pb-2">
+                        SCRIPTS CISCO PACKET TRACER
+                    </h3>
+                    <div class="space-y-2 text-xs">
+                        <button onclick="loadScript('r1')" class="w-full text-left p-2.5 rounded bg-cyber-card border border-cyber-cyan text-cyber-cyan font-bold">1. Router R1</button>
+                        <button onclick="loadScript('r2')" class="w-full text-left p-2.5 rounded bg-cyber-card border border-gray-800 text-gray-300">2. Router R2</button>
+                        <button onclick="loadScript('r3')" class="w-full text-left p-2.5 rounded bg-cyber-card border border-gray-800 text-gray-300">3. Router R3</button>
+                        <button onclick="loadScript('verify')" class="w-full text-left p-2.5 rounded bg-cyber-card border border-gray-800 text-gray-300">4. Verificación</button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 bg-cyber-black border-2 border-cyber-cyan rounded-lg overflow-hidden shadow-neon-cyan flex flex-col justify-between">
+                    <div class="bg-cyber-cyan/10 border-b border-cyber-cyan/30 px-3 py-2 flex justify-between items-center">
+                        <span id="script-title" class="text-[11px] font-orbitron font-bold text-cyber-cyan">R1_CONFIG.TXT</span>
+                        <button onclick="copyCurrentScript()" class="bg-cyber-cyan text-cyber-black font-orbitron font-bold px-3 py-1 rounded text-[11px]">COPIAR SCRIPT</button>
+                    </div>
+                    <pre id="terminal-code" class="p-4 text-xs font-fira text-cyber-green overflow-x-auto leading-relaxed h-[280px]">
+enable
+configure terminal
+hostname R1
+router eigrp 100
+ network 192.168.10.0 0.0.0.255
+ network 10.0.0.0 0.0.0.3
+ passive-interface GigabitEthernet0/0/0
+ no auto-summary
+                    </pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 4: CALCULADORA DE MÉTRICA K            -->
+        <!-- ========================================== -->
+        <section id="content-calculadora" class="tab-content hidden space-y-4">
+            <div class="bg-cyber-panel border border-cyber-yellow/50 p-4 sm:p-6 rounded-lg clip-corner shadow-lg space-y-4">
+                <h2 class="text-base sm:text-lg font-orbitron font-bold text-cyber-yellow">CALCULADORA DE MÉTRICA COMPUESTA K</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1 font-bold">Ancho de Banda (BW):</label>
+                        <select id="calc-bw" onchange="calculateMetric()" class="w-full bg-cyber-black border border-cyber-yellow/50 text-cyber-yellow p-2.5 rounded text-xs font-fira">
+                            <option value="1000000">1 Gbps</option>
+                            <option value="100000" selected>100 Mbps</option>
+                            <option value="1544">1.544 Mbps T1</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-300 block mb-1 font-bold">Delay (decenas de µs):</label>
+                        <input type="number" id="calc-delay" value="100" oninput="calculateMetric()" class="w-full bg-cyber-black border border-cyber-yellow/50 text-cyber-yellow p-2 rounded text-xs font-fira">
+                    </div>
+                    <div class="bg-cyber-black p-4 rounded border border-cyber-yellow text-center shadow-neon-yellow">
+                        <span class="text-[10px] text-gray-400 block font-bold">MÉTRICA RESULTANTE</span>
+                        <span id="calc-result" class="text-2xl font-orbitron font-bold text-cyber-yellow">28,160</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 5: VISOR DE DIAPOSITIVAS PPTX          -->
+        <!-- ========================================== -->
+        <section id="content-pptx" class="tab-content space-y-4">
+            
+            <div class="bg-cyber-panel border border-cyber-purple/50 p-4 sm:p-6 rounded-lg clip-corner shadow-lg space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-gray-800 pb-3">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="presentation" class="w-5 h-5 text-cyber-purple"></i>
+                        <h2 class="text-base sm:text-lg font-orbitron font-bold text-white">DIAPOSITIVAS OFICIALES - CIPAS #2</h2>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button id="btn-autoplay" onclick="toggleAutoPlay()" class="bg-cyber-purple/20 hover:bg-cyber-purple/40 text-cyber-purple border border-cyber-purple px-3 py-1 rounded text-xs font-orbitron font-bold flex items-center space-x-1 transition">
+                            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                            <span id="autoplay-text">AUTO-PLAY</span>
+                        </button>
+                        <span id="slide-counter" class="text-[11px] font-orbitron text-cyber-cyan bg-cyber-black px-2.5 py-1 rounded border border-cyber-cyan">SLIDE 1 DE 8</span>
+                    </div>
+                </div>
+
+                <!-- Diapositiva Activa -->
+                <div class="bg-cyber-black border-2 border-cyber-purple/60 rounded-lg p-5 sm:p-6 min-h-[340px] flex flex-col justify-between shadow-neon-pink">
+                    <div id="slide-content" class="space-y-4">
+                        <!-- Se inserta dinámicamente con JavaScript -->
+                    </div>
+
+                    <!-- Controles e indicadores -->
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-gray-800 mt-4">
+                        <button onclick="prevSlide()" class="w-full sm:w-auto bg-cyber-card border border-cyber-purple text-cyber-purple hover:bg-cyber-purple hover:text-white px-4 py-2 rounded font-orbitron text-xs font-bold transition flex items-center justify-center space-x-1">
+                            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                            <span>ANTERIOR</span>
+                        </button>
+
+                        <div class="flex space-x-1.5" id="slide-dots">
+                            <!-- Puntos indicadores -->
+                        </div>
+
+                        <button onclick="nextSlide()" class="w-full sm:w-auto bg-cyber-purple hover:bg-cyber-purple/80 text-white px-4 py-2 rounded font-orbitron text-xs font-bold transition flex items-center justify-center space-x-1">
+                            <span>SIGUIENTE</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 6: QUIZ STAND                          -->
+        <!-- ========================================== -->
+        <section id="content-quiz" class="tab-content hidden space-y-4">
+            <div class="bg-cyber-panel border border-cyber-pink/50 p-4 sm:p-6 rounded-lg clip-corner shadow-neon-pink space-y-4">
+                <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                    <h2 class="text-base sm:text-lg font-orbitron font-bold text-cyber-pink">TRIVIA INTERACTIVA PARA EL STAND</h2>
+                    <div class="bg-cyber-black px-3 py-1 rounded border border-cyber-pink text-center">
+                        <span id="quiz-score" class="text-base font-orbitron font-bold text-cyber-pink">0 / 5</span>
+                    </div>
+                </div>
+
+                <div id="quiz-card" class="bg-cyber-black p-4 rounded-lg border border-cyber-pink/30 space-y-4">
+                    <span id="quiz-question-num" class="text-[10px] font-orbitron text-cyber-cyan block">PREGUNTA 1 DE 5</span>
+                    <h3 id="quiz-question-text" class="text-sm font-fira text-white font-bold">Cargando pregunta...</h3>
+                    <div id="quiz-options" class="space-y-2 text-xs font-fira"></div>
+                    <div id="quiz-feedback" class="hidden p-3 rounded text-xs font-fira font-bold"></div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button id="btn-next-quiz" onclick="nextQuizQuestion()" class="hidden bg-cyber-pink text-white font-orbitron font-bold px-4 py-2 rounded text-xs">SIGUIENTE PREGUNTA</button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER CIPAS #2 -->
+    <footer class="border-t border-cyber-cyan/30 bg-cyber-black/95 py-3 text-xs font-fira">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2 text-gray-400 text-center sm:text-left">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="users" class="w-4 h-4 text-cyber-pink"></i>
+                <span class="font-bold text-gray-200">PROYECTO DESARROLLADO POR CIPAS #2</span>
+            </div>
+            <div class="text-cyber-cyan font-orbitron text-[10px]">
+                EIGRP PROTOCOL // STAND DEMO 2026
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        lucide.createIcons();
+
+        // 1. TABS SWITCHING
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-cyber-cyan', 'bg-cyber-cyan/20', 'text-cyber-cyan');
+                btn.classList.add('border-gray-800', 'bg-cyber-panel', 'text-gray-400');
+            });
+
+            document.getElementById(`content-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active', 'border-cyber-cyan', 'bg-cyber-cyan/20', 'text-cyber-cyan');
+                activeBtn.classList.remove('border-gray-800', 'bg-cyber-panel', 'text-gray-400');
+            }
+        }
+
+        // 2. DUAL SIMULATOR
+        let isLinkDown = false;
+        function toggleLinkFailure() {
+            isLinkDown = !isLinkDown;
+            const btn = document.getElementById('btn-toggle-fail');
+            const linkLine = document.getElementById('svg-link-r1-r2');
+            const desc = document.getElementById('sim-description');
+
+            if (isLinkDown) {
+                btn.innerText = "RESTAURAR ENLACE PRINCIPAL";
+                linkLine.setAttribute('stroke', '#ff0055');
+                linkLine.classList.remove('animated-link');
+                desc.innerHTML = `<strong class="text-cyber-pink">¡FALLA DETECTADA!</strong> Conmutación ejecutada al <strong class="text-cyber-yellow">Sucesor Factible (FS)</strong> sin pérdida de paquetes (0ms).`;
+            } else {
+                btn.innerText = "SIMULAR FALLA DE ENLACE (R1-R2)";
+                linkLine.setAttribute('stroke', '#00f3ff');
+                linkLine.classList.add('animated-link');
+                desc.innerHTML = `Tráfico enrutado vía <strong class="text-cyber-cyan">R2 (Sucesor Principal)</strong>. Métrica FD: <code class="text-cyber-yellow">28160</code>.`;
+            }
+        }
+
+        function selectRouter(routerName) {
+            showToast(`Nodo ${routerName} seleccionado`);
+        }
+
+        // 3. CISCO IOS SCRIPTS
+        const scripts = {
+            r1: { title: 'R1_CONFIG.TXT', code: 'enable\nconfigure terminal\nhostname R1\nrouter eigrp 100\n network 192.168.10.0 0.0.0.255\n network 10.0.0.0 0.0.0.3\n passive-interface GigabitEthernet0/0/0\n no auto-summary' },
+            r2: { title: 'R2_CONFIG.TXT', code: 'enable\nconfigure terminal\nhostname R2\nrouter eigrp 100\n network 10.0.0.0 0.0.0.3\n network 10.0.0.4 0.0.0.3\n no auto-summary' },
+            r3: { title: 'R3_CONFIG.TXT', code: 'enable\nconfigure terminal\nhostname R3\nrouter eigrp 100\n network 192.168.20.0 0.0.0.255\n network 10.0.0.4 0.0.0.3\n passive-interface GigabitEthernet0/0/0\n no auto-summary' },
+            verify: { title: 'VERIFICACION.TXT', code: 'show ip eigrp neighbors\nshow ip eigrp topology\nshow ip route eigrp\nshow ip protocols' }
+        };
+        let activeScriptKey = 'r1';
+
+        function loadScript(key) {
+            activeScriptKey = key;
+            document.getElementById('script-title').innerText = scripts[key].title;
+            document.getElementById('terminal-code').innerText = scripts[key].code;
+        }
+
+        function copyCurrentScript() {
+            navigator.clipboard.writeText(scripts[activeScriptKey].code);
+            showToast('Script copiado al portapapeles');
+        }
+
+        // 4. CALCULADORA DE MÉTRICA
+        function calculateMetric() {
+            const bw = parseFloat(document.getElementById('calc-bw').value);
+            const delay = parseFloat(document.getElementById('calc-delay').value);
+            const metric = Math.round(256 * ((10000000 / bw) + delay));
+            document.getElementById('calc-result').innerText = metric.toLocaleString();
+        }
+
+        // 5. SLIDES PPTX CON INTEGRANTES DEL CIPAS #2
+        const slides = [
+            {
+                tag: "PROYECTO CIPAS #2",
+                title: "1. Arquitectura de Redes con EIGRP",
+                content: `
+                    <p class="text-xs text-gray-300 leading-relaxed">
+                        Bienvenido a la presentación interactiva del <strong class="text-cyber-cyan">CIPAS #2</strong> sobre el protocolo de enrutamiento dinámico <strong>EIGRP (Enhanced Interior Gateway Routing Protocol)</strong>.
+                    </p>
+                    <div class="mt-3 bg-cyber-card p-3 rounded border border-cyber-cyan/40">
+                        <span class="text-cyber-cyan font-bold block text-xs mb-1.5">INTEGRANTES DEL EQUIPO (CIPAS #2):</span>
+                        <div class="grid grid-cols-2 gap-1.5 text-xs text-gray-200">
+                            <div class="flex items-center space-x-1">
+                                <span class="text-cyber-pink">▸</span>
+                                <span>Gleimer Arias</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-cyber-pink">▸</span>
+                                <span>Jonny Carrisoza</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-cyber-pink">▸</span>
+                                <span>Edwin Montiel</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <span class="text-cyber-pink">▸</span>
+                                <span>Miler Alarcón</span>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                tag: "FUNDAMENTOS TEÓRICOS",
+                title: "2. ¿Qué es EIGRP y cómo funciona?",
+                content: `
+                    <p class="text-xs text-gray-300">EIGRP es un protocolo de enrutamiento <strong>vector distancia avanzado</strong> desarrollado por Cisco que combina la rapidez de los protocolos de estado de enlace con la simplicidad de vector distancia.</p>
+                    <ul class="text-xs text-gray-300 space-y-1 mt-2 list-disc pl-4">
+                        <li>Utiliza paquetes Multicast <code class="text-cyber-yellow">224.0.0.10</code>.</li>
+                        <li>Dirección Administrativa Interna (AD): <strong class="text-cyber-green">90</strong>.</li>
+                        <li>Soporta VLSM y CIDR con el comando <code class="text-cyber-yellow">no auto-summary</code>.</li>
+                    </ul>
+                `
+            },
+            {
+                tag: "ESTRUCTURA DE DATOS",
+                title: "3. Las 3 Tablas de EIGRP",
+                content: `
+                    <div class="space-y-2 text-xs">
+                        <div class="bg-cyber-card p-2 rounded border-l-2 border-cyber-cyan">
+                            <strong class="text-cyber-cyan">Tabla de Vecinos:</strong> Adyacencias directas confirmadas vía Hello.
+                        </div>
+                        <div class="bg-cyber-card p-2 rounded border-l-2 border-cyber-pink">
+                            <strong class="text-cyber-pink">Tabla de Topología:</strong> Todas las rutas aprendidas con sus métricas FD y RD.
+                        </div>
+                        <div class="bg-cyber-card p-2 rounded border-l-2 border-cyber-yellow">
+                            <strong class="text-cyber-yellow">Tabla de Enrutamiento:</strong> Solo las mejores rutas activas (Sucesores).
+                        </div>
+                    </div>
+                `
+            },
+            {
+                tag: "ALGORITMO DUAL",
+                title: "4. Algoritmo DUAL y Tolerancia a Fallos",
+                content: `
+                    <p class="text-xs text-gray-300">DUAL (<em class="text-cyber-pink">Diffusing Update Algorithm</em>) garantiza operaciones totalmente libres de bucles.</p>
+                    <div class="bg-cyber-card p-2.5 rounded border border-cyber-cyan/30 text-xs mt-2 space-y-1">
+                        <div><strong class="text-cyber-green">Sucesor:</strong> Ruta primaria activa en la tabla de enrutamiento.</div>
+                        <div><strong class="text-cyber-yellow">Sucesor Factible (FS):</strong> Ruta de respaldo precargada con convergencia de 0 ms.</div>
+                    </div>
+                `
+            },
+            {
+                tag: "MÉTRICAS DE ENLACE",
+                title: "5. Fórmula de Métrica Compuesta K",
+                content: `
+                    <p class="text-xs text-gray-300">Por defecto, EIGRP utiliza K1 (Ancho de Banda) y K3 (Retardo) para calcular el costo del enlace:</p>
+                    <div class="bg-cyber-black p-3 rounded border border-cyber-yellow text-center text-xs text-cyber-yellow font-fira mt-2">
+                        Métrica = 256 * [ (10^7 / BW_min_Kbps) + Suma_Delays ]
+                    </div>
+                `
+            },
+            {
+                tag: "TOPOLOGÍA DE PRÁCTICA",
+                title: "6. Diseño del Laboratorio en Packet Tracer",
+                content: `
+                    <p class="text-xs text-gray-300">Se implementó una topología triangulada de 3 routers (R1 Gateway, R2 Core, R3 Branch) interconectados por enlaces seriales WAN V.35 y redes LAN locales.</p>
+                    <div class="p-2 bg-cyber-card rounded border border-gray-800 text-[11px] text-cyber-cyan mt-2">
+                        AS Utilizado: 100 // Máscaras Wildcard en redes punto a punto: 0.0.0.3 (/30)
+                    </div>
+                `
+            },
+            {
+                tag: "SEGURIDAD Y OPTIMIZACIÓN",
+                title: "7. Passive Interfaces y Resumen",
+                content: `
+                    <p class="text-xs text-gray-300">Para optimizar el uso de procesamiento y mejorar la seguridad en el laboratorio:</p>
+                    <ul class="text-xs text-gray-300 space-y-1 mt-2 list-disc pl-4">
+                        <li><strong class="text-cyber-pink">passive-interface:</strong> Bloquea paquetes de control hacia los switches LAN de usuarios.</li>
+                        <li><strong class="text-cyber-yellow">no auto-summary:</strong> Permite la propagación exacta de subredes no contiguas.</li>
+                    </ul>
+                `
+            },
+            {
+                tag: "CONCLUSIÓN CIPAS #2",
+                title: "8. Conclusiones y Exposición del Equipo",
+                content: `
+                    <p class="text-xs text-gray-300 leading-relaxed">
+                        EIGRP destaca como la solución óptima en infraestructura Cisco por su balance perfecto entre rapidez de convergencia mediante DUAL, bajo consumo de ancho de banda y facilidad de administración.
+                    </p>
+                    <div class="p-2.5 bg-cyber-pink/20 border border-cyber-pink rounded text-center text-cyber-pink font-orbitron font-bold text-xs mt-3">
+                        PRESENTADO POR: GLEIMER, JONNY, EDWIN Y MILER // CIPAS #2
+                    </div>
+                `
+            }
+        ];
+
+        let currentSlideIdx = 0;
+        let autoPlayTimer = null;
+
+        function renderSlide() {
+            const slide = slides[currentSlideIdx];
+            document.getElementById('slide-counter').innerText = `SLIDE ${currentSlideIdx + 1} DE ${slides.length}`;
+            document.getElementById('slide-content').innerHTML = `
+                <span class="text-cyber-pink font-orbitron text-[10px] uppercase font-bold tracking-wider">${slide.tag}</span>
+                <h3 class="text-base sm:text-lg font-orbitron font-bold text-white">${slide.title}</h3>
+                ${slide.content}
+            `;
+
+            const dots = document.getElementById('slide-dots');
+            dots.innerHTML = '';
+            slides.forEach((_, i) => {
+                const d = document.createElement('button');
+                d.className = `w-2.5 h-2.5 rounded-full transition-all ${i === currentSlideIdx ? 'bg-cyber-purple w-6' : 'bg-gray-700 hover:bg-gray-500'}`;
+                d.onclick = () => { currentSlideIdx = i; renderSlide(); };
+                dots.appendChild(d);
+            });
+        }
+
+        function nextSlide() {
+            currentSlideIdx = (currentSlideIdx + 1) % slides.length;
+            renderSlide();
+        }
+
+        function prevSlide() {
+            currentSlideIdx = (currentSlideIdx - 1 + slides.length) % slides.length;
+            renderSlide();
+        }
+
+        function toggleAutoPlay() {
+            const btnText = document.getElementById('autoplay-text');
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+                btnText.innerText = "AUTO-PLAY";
+                showToast("Auto-play pausado");
+            } else {
+                autoPlayTimer = setInterval(nextSlide, 4500);
+                btnText.innerText = "PAUSAR";
+                showToast("Auto-play activado (4.5s)");
+            }
+        }
+
+        // 6. QUIZ LOGIC
+        const quizQuestions = [
+            { q: "¿Qué significa EIGRP?", options: ["Enhanced Interior Gateway Routing Protocol", "Exterior Internet Gateway Routing Protocol", "Ethernet IP Gateway Routing Path"], correct: 0 },
+            { q: "¿Qué algoritmo utiliza EIGRP para evitar bucles?", options: ["Dijkstra", "DUAL (Diffusing Update Algorithm)", "Bellman-Ford"], correct: 1 },
+            { q: "¿Qué condición debe cumplirse para que una ruta sea Sucesor Factible (FS)?", options: ["RD > FD actual", "RD < FD actual (Condición de Factibilidad)", "Métrica igual a cero"], correct: 1 },
+            { q: "¿Para qué sirve el comando 'passive-interface'?", options: ["Para apagar la interfaz física", "Para evitar enviar paquetes Hello hacia usuarios LAN", "Para cambiar la IP"], correct: 1 },
+            { q: "¿Qué grupo presentó este proyecto de stand?", options: ["CIPAS #1", "CIPAS #2", "CIPAS #3"], correct: 1 }
+        ];
+
+        let quizIndex = 0;
+        let quizScore = 0;
+
+        function loadQuizQuestion() {
+            const qData = quizQuestions[quizIndex];
+            document.getElementById('quiz-question-num').innerText = `PREGUNTA ${quizIndex + 1} DE ${quizQuestions.length}`;
+            document.getElementById('quiz-question-text').innerText = qData.q;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            document.getElementById('btn-next-quiz').classList.add('hidden');
+
+            qData.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-3 rounded bg-cyber-card border border-gray-800 hover:border-cyber-pink text-gray-200 transition font-fira";
+                btn.innerText = `${idx + 1}. ${opt}`;
+                btn.onclick = () => answerQuiz(idx);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function answerQuiz(selectedIdx) {
+            const qData = quizQuestions[quizIndex];
+            const feedback = document.getElementById('quiz-feedback');
+            const optionsBtns = document.getElementById('quiz-options').children;
+
+            for (let btn of optionsBtns) btn.disabled = true;
+
+            if (selectedIdx === qData.correct) {
+                quizScore++;
+                feedback.className = "p-3 rounded text-xs font-fira font-bold bg-cyber-green/20 border border-cyber-green text-cyber-green";
+                feedback.innerText = "¡CORRECTO! +1 Punto para la trivia CIPAS #2.";
+            } else {
+                feedback.className = "p-3 rounded text-xs font-fira font-bold bg-cyber-pink/20 border border-cyber-pink text-cyber-pink";
+                feedback.innerText = `INCORRECTO. La respuesta correcta era: ${qData.options[qData.correct]}`;
+            }
+
+            feedback.classList.remove('hidden');
+            document.getElementById('quiz-score').innerText = `${quizScore} / ${quizQuestions.length}`;
+            document.getElementById('btn-next-quiz').classList.remove('hidden');
+        }
+
+        function nextQuizQuestion() {
+            if (quizIndex < quizQuestions.length - 1) {
+                quizIndex++;
+                loadQuizQuestion();
+            } else {
+                document.getElementById('quiz-card').innerHTML = `
+                    <div class="text-center py-6 space-y-3">
+                        <h3 class="text-lg font-orbitron font-bold text-white">¡TRIVIA DE STAND COMPLETADA!</h3>
+                        <p class="text-xs text-cyber-cyan font-fira">Puntaje Final: <strong>${quizScore} / ${quizQuestions.length}</strong></p>
+                        <button onclick="resetQuiz()" class="bg-cyber-pink text-white text-xs font-orbitron font-bold px-4 py-2 rounded">REINTENTAR TRIVIA</button>
+                    </div>
+                `;
+                document.getElementById('btn-next-quiz').classList.add('hidden');
+            }
+        }
+
+        function resetQuiz() {
+            quizIndex = 0;
+            quizScore = 0;
+            document.getElementById('quiz-score').innerText = `0 / ${quizQuestions.length}`;
+            document.getElementById('quiz-card').innerHTML = `
+                <span id="quiz-question-num" class="text-[10px] font-orbitron text-cyber-cyan block">PREGUNTA 1 DE 5</span>
+                <h3 id="quiz-question-text" class="text-sm font-fira text-white font-bold">Cargando pregunta...</h3>
+                <div id="quiz-options" class="space-y-2 text-xs font-fira"></div>
+                <div id="quiz-feedback" class="hidden p-3 rounded text-xs font-fira font-bold"></div>
+            `;
+            loadQuizQuestion();
+        }
+
+        // UTILITIES
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('-translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('-translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        // INIT
+        window.onload = function() {
+            calculateMetric();
+            renderSlide();
+            loadQuizQuestion();
+        };
+    </script>
+
+</body>
+</html>
